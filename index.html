@@ -165,12 +165,16 @@
             align-items: start;
         }
         
-        /* Align Hint with Easy (first column) and Sound with Hard (third column) */
+        /* Second row: Hint, Help, Sound */
         .controls button:nth-child(4) {
             grid-column: 1;
         }
-        
+
         .controls button:nth-child(5) {
+            grid-column: 2;
+        }
+
+        .controls button:nth-child(6) {
             grid-column: 3;
         }
 
@@ -211,9 +215,6 @@
             cursor: not-allowed;
         }
 
-        .sound-toggle {
-            margin-left: auto;
-        }
 
         .modal {
             display: none;
@@ -263,6 +264,58 @@
 
         .modal button:active {
             border-color: #808080 #fff #fff #808080;
+        }
+
+        .help-content {
+            text-align: left;
+            max-width: 320px;
+        }
+
+        .help-content h2 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .help-content h3 {
+            font-size: 14px;
+            margin: 12px 0 6px 0;
+            border-bottom: 1px solid #808080;
+            padding-bottom: 3px;
+        }
+
+        .help-content ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 13px;
+        }
+
+        .help-content li {
+            margin: 4px 0;
+        }
+
+        .help-content p {
+            font-size: 13px;
+            margin: 8px 0;
+        }
+
+        .help-tip {
+            background: #ffffcc;
+            padding: 8px;
+            border: 1px solid #cccc00;
+            margin-top: 12px;
+        }
+
+        .help-section {
+            display: none;
+        }
+
+        .help-section.visible {
+            display: block;
+        }
+
+        #help-close-btn {
+            display: block;
+            margin: 15px auto 0;
         }
 
         .stats {
@@ -405,6 +458,7 @@
             <button id="medium-btn" class="active">Medium</button>
             <button id="hard-btn">Hard</button>
             <button id="hint-btn">💡 Hint</button>
+            <button id="help-btn">❓ Help</button>
             <button id="sound-btn" class="sound-toggle">🔊 Sound</button>
         </div>
         <div class="stats" id="stats">Games: 0 | Wins: 0 (0%) | Best: -</div>
@@ -416,6 +470,40 @@
             <h2 id="modal-title">Yikes! Game Over</h2>
             <p id="modal-message">You hit a mine!</p>
             <button id="modal-button">Play Again</button>
+        </div>
+    </div>
+
+    <div class="modal" id="help-modal">
+        <div class="modal-content help-content">
+            <h2>How to Play</h2>
+            <p>Reveal all cells without hitting a mine. Numbers show adjacent mines.</p>
+
+            <div id="desktop-controls" class="help-section">
+                <h3>Desktop Controls</h3>
+                <ul>
+                    <li><b>Left-click:</b> Reveal cell</li>
+                    <li><b>Right-click:</b> Flag/unflag mine</li>
+                    <li><b>Double-click number:</b> Chord (reveal adjacent)</li>
+                    <li><b>Arrow keys:</b> Navigate</li>
+                    <li><b>Space/Enter:</b> Reveal</li>
+                    <li><b>F:</b> Flag</li>
+                    <li><b>R:</b> Restart</li>
+                    <li><b>H:</b> Hint</li>
+                </ul>
+            </div>
+
+            <div id="mobile-controls" class="help-section">
+                <h3>Touch Controls</h3>
+                <ul>
+                    <li><b>Tap:</b> Reveal cell</li>
+                    <li><b>Long-press:</b> Flag/unflag mine</li>
+                    <li><b>Double-tap number:</b> Chord (reveal adjacent)</li>
+                </ul>
+            </div>
+
+            <p class="help-tip">💡 <b>Hint button:</b> Reveals a safe cell or flags a mine (works after first click)</p>
+
+            <button id="help-close-btn">Got it!</button>
         </div>
     </div>
 
@@ -750,6 +838,12 @@
                 document.getElementById('sound-btn').addEventListener('click', (e) => {
                     const enabled = this.sound.toggle();
                     e.target.textContent = enabled ? '🔊 Sound' : '🔇 Muted';
+                });
+
+                // Help modal
+                document.getElementById('help-btn').addEventListener('click', () => this.showHelp());
+                document.getElementById('help-close-btn').addEventListener('click', () => {
+                    document.getElementById('help-modal').classList.remove('show');
                 });
 
                 // Keyboard shortcuts
@@ -1343,6 +1437,19 @@
                         hintElement.textContent = 'Use arrow keys to navigate, Space to reveal, F to flag, R to restart';
                     }
                 }
+            }
+
+            showHelp() {
+                const helpModal = document.getElementById('help-modal');
+                const desktopControls = document.getElementById('desktop-controls');
+                const mobileControls = document.getElementById('mobile-controls');
+                const isMobile = this.isTouchDevice() && window.innerWidth <= 600;
+
+                // Show appropriate controls section
+                desktopControls.classList.toggle('visible', !isMobile);
+                mobileControls.classList.toggle('visible', isMobile);
+
+                helpModal.classList.add('show');
             }
 
             toggleCheat() {
