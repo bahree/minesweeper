@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Minesweeper - Classic puzzle game with keyboard shortcuts, hints, and offline support">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Minesweeper - Enhanced</title>
+    <!-- PWA manifest will be created dynamically -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: #c0c0c0;
+            border: 3px solid;
+            border-color: #fff #808080 #808080 #fff;
+            padding: 10px;
+            user-select: none;
+            display: inline-block;
+            margin: 0 auto;
+            box-sizing: border-box;
+            overflow: visible;
+            touch-action: manipulation;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #c0c0c0;
+            border: 3px solid;
+            border-color: #808080 #fff #fff #808080;
+            padding: 5px 10px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        .counter {
+            background: #000;
+            color: #f00;
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            font-weight: bold;
+            padding: 2px 5px;
+            min-width: 60px;
+            text-align: center;
+            border: 2px solid;
+            border-color: #808080 #fff #fff #808080;
+        }
+
+        .face-button {
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            border: 3px solid;
+            border-color: #fff #808080 #808080 #fff;
+            background: #c0c0c0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .face-button:active {
+            border-color: #808080 #fff #fff #808080;
+        }
+
+        .board {
+            display: grid !important;
+            border: 3px solid;
+            border-color: #808080 #fff #fff #808080;
+            background: #c0c0c0;
+            overflow: visible;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 3px solid;
+            border-color: #fff #808080 #808080 #fff;
+            background: #c0c0c0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .cell:hover:not(.revealed):not(.flagged) {
+            background: #d4d4d4;
+        }
+
+        .cell.keyboard-selected {
+            outline: 2px solid #0000ff;
+            outline-offset: -2px;
+            background: #b0d0ff !important;
+        }
+
+        .cell.hint-highlight {
+            animation: hintPulse 1s ease-in-out;
+            background: #ffff99 !important;
+        }
+
+        @keyframes hintPulse {
+            0%, 100% { background: #ffff99; }
+            50% { background: #ffcc00; }
+        }
+
+        .cell.revealed {
+            border: 1px solid #808080;
+            cursor: default;
+        }
+
+        .cell.mine-exploded {
+            background: #f00;
+        }
+
+        .cell.flagged::after {
+            content: '🚩';
+            font-size: var(--flag-font-size, 16px);
+        }
+
+        .cell.question::after {
+            content: '?';
+            font-size: var(--flag-font-size, 18px);
+            color: #000;
+        }
+
+        .cell[data-number="1"] { color: #0000ff; }
+        .cell[data-number="2"] { color: #008000; }
+        .cell[data-number="3"] { color: #ff0000; }
+        .cell[data-number="4"] { color: #000080; }
+        .cell[data-number="5"] { color: #800000; }
+        .cell[data-number="6"] { color: #008080; }
+        .cell[data-number="7"] { color: #000000; }
+        .cell[data-number="8"] { color: #808080; }
+
+        .controls {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: min-content;
+            gap: 5px;
+            box-sizing: border-box;
+            align-items: start;
+        }
+        
+        /* Align Hint with Easy (first column) and Sound with Hard (third column) */
+        .controls button:nth-child(4) {
+            grid-column: 1;
+        }
+        
+        .controls button:nth-child(5) {
+            grid-column: 3;
+        }
+
+        .controls button {
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 3px solid;
+            border-color: #fff #808080 #808080 #fff;
+            background: #c0c0c0;
+            font-weight: bold;
+            align-self: start;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            box-sizing: border-box;
+            line-height: 1.2;
+            height: auto;
+            min-height: auto;
+            max-height: none;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .controls button:active {
+            border-color: #808080 #fff #fff #808080;
+        }
+
+        .controls button.active {
+            border-color: #808080 #fff #fff #808080;
+            background: #a0a0a0;
+        }
+
+        .controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .sound-toggle {
+            margin-left: auto;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #c0c0c0;
+            border: 3px solid;
+            border-color: #fff #808080 #808080 #fff;
+            padding: 20px;
+            text-align: center;
+            min-width: 250px;
+        }
+
+        .modal h2 {
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .modal p {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .modal button {
+            padding: 10px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border: 3px solid;
+            border-color: #fff #808080 #808080 #fff;
+            background: #c0c0c0;
+            font-weight: bold;
+        }
+
+        .modal button:active {
+            border-color: #808080 #fff #fff #808080;
+        }
+
+        .stats {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #333;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .keyboard-hint {
+            margin-top: 5px;
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        /* Mobile responsive styles */
+        .board {
+            touch-action: manipulation;
+        }
+
+        .cell {
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+        }
+
+        .cell.long-press-active {
+            background: #a0a0a0 !important;
+        }
+
+        .cell.cheat-mine:not(.revealed):not(.flagged) {
+            background: linear-gradient(135deg, #ffcccc 0%, #ffaaaa 100%) !important;
+            box-shadow: inset 0 0 3px rgba(255, 0, 0, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 20px;
+            }
+
+            .game-container {
+                padding: 6px;
+                max-width: calc(100vw - 20px);
+                width: auto !important;
+                min-width: auto !important;
+            }
+
+            .header {
+                padding: 4px 6px;
+                margin-bottom: 6px;
+                width: 100% !important;
+                min-width: auto !important;
+                max-width: 100% !important;
+            }
+
+            .controls {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .counter {
+                font-size: 20px;
+                min-width: 50px;
+                padding: 2px 4px;
+            }
+
+            .face-button {
+                width: 36px;
+                height: 36px;
+                font-size: 20px;
+            }
+
+            .controls {
+                gap: 4px;
+            }
+
+            .controls button {
+                padding: 10px 8px;
+                font-size: 12px;
+                min-height: 44px;
+            }
+
+            .stats {
+                font-size: 11px;
+            }
+
+            .keyboard-hint {
+                font-size: 10px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            body {
+                padding: 5px;
+                padding-top: 10px;
+            }
+
+            .game-container {
+                padding: 4px;
+            }
+
+            .header {
+                padding: 3px 4px;
+                margin-bottom: 4px;
+            }
+
+            .counter {
+                font-size: 16px;
+                min-width: 42px;
+            }
+
+            .face-button {
+                width: 32px;
+                height: 32px;
+                font-size: 18px;
+            }
+
+            .controls button {
+                padding: 8px 4px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div class="counter" id="mine-counter">040</div>
+            <button class="face-button" id="face-button">😊</button>
+            <div class="counter" id="timer">000</div>
+        </div>
+        <div class="board" id="board"></div>
+        <div class="controls">
+            <button id="easy-btn">Easy</button>
+            <button id="medium-btn" class="active">Medium</button>
+            <button id="hard-btn">Hard</button>
+            <button id="hint-btn">💡 Hint</button>
+            <button id="sound-btn" class="sound-toggle">🔊 Sound</button>
+        </div>
+        <div class="stats" id="stats">Games: 0 | Wins: 0 (0%) | Best: -</div>
+        <div class="keyboard-hint" id="keyboard-hint">Use arrow keys to navigate, Space to reveal, F to flag, R to restart</div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">Yikes! Game Over</h2>
+            <p id="modal-message">You hit a mine!</p>
+            <button id="modal-button">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Sound System using Web Audio API
+        class SoundSystem {
+            constructor() {
+                this.enabled = true;
+                this.audioContext = null;
+                this.initialized = false;
+            }
+
+            init() {
+                if (this.initialized) return;
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.initialized = true;
+                } catch (e) {
+                    console.log('Web Audio API not supported');
+                    this.enabled = false;
+                }
+            }
+
+            toggle() {
+                this.enabled = !this.enabled;
+                return this.enabled;
+            }
+
+            play(type) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.audioContext) return;
+
+                const ctx = this.audioContext;
+                const now = ctx.currentTime;
+
+                switch (type) {
+                    case 'click':
+                        this.playClick(ctx, now);
+                        break;
+                    case 'reveal':
+                        this.playReveal(ctx, now);
+                        break;
+                    case 'flag':
+                        this.playFlag(ctx, now);
+                        break;
+                    case 'unflag':
+                        this.playUnflag(ctx, now);
+                        break;
+                    case 'explosion':
+                        this.playExplosion(ctx, now);
+                        break;
+                    case 'win':
+                        this.playWin(ctx, now);
+                        break;
+                    case 'chord':
+                        this.playChord(ctx, now);
+                        break;
+                    case 'hint':
+                        this.playHint(ctx, now);
+                        break;
+                }
+            }
+
+            playClick(ctx, now) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            }
+
+            playReveal(ctx, now) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+
+            playFlag(ctx, now) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(900, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+
+            playUnflag(ctx, now) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(900, now);
+                osc.frequency.setValueAtTime(600, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+
+            playExplosion(ctx, now) {
+                const bufferSize = ctx.sampleRate * 0.5;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1000, now);
+                filter.frequency.exponentialRampToValueAtTime(100, now + 0.5);
+
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+                noise.start(now);
+                noise.stop(now + 0.5);
+
+                const osc = ctx.createOscillator();
+                const oscGain = ctx.createGain();
+                osc.connect(oscGain);
+                oscGain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+                oscGain.gain.setValueAtTime(0.2, now);
+                oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            playWin(ctx, now) {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.15);
+                    gain.gain.setValueAtTime(0, now + i * 0.15);
+                    gain.gain.linearRampToValueAtTime(0.15, now + i * 0.15 + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.4);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.4);
+                });
+            }
+
+            playChord(ctx, now) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+                gain.gain.setValueAtTime(0.06, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+
+            playHint(ctx, now) {
+                [440, 554.37, 659.25].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.1);
+                    gain.gain.setValueAtTime(0.1, now + i * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.2);
+                    osc.start(now + i * 0.1);
+                    osc.stop(now + i * 0.1 + 0.2);
+                });
+            }
+        }
+
+        // Game Class
+        class Minesweeper {
+            constructor() {
+                this.difficulties = {
+                    easy: { rows: 9, cols: 9, mines: 10 },
+                    medium: { rows: 16, cols: 16, mines: 40 },
+                    hard: { rows: 16, cols: 30, mines: 99 }
+                };
+
+                this.difficulty = 'medium';
+                this.board = [];
+                this.revealed = [];
+                this.flagged = [];
+                this.questioned = [];
+                this.gameOver = false;
+                this.gameWon = false;
+                this.gameStarted = false;
+                this.timer = 0;
+                this.timerInterval = null;
+                this.minesRemaining = 0;
+                this.firstClick = true;
+                
+                // Keyboard navigation
+                this.keyboardRow = 0;
+                this.keyboardCol = 0;
+                this.keyboardMode = false;
+
+                // Cheat code tracking
+                this.cheatBuffer = '';
+                this.cheatsEnabled = false;
+
+                this.sound = new SoundSystem();
+
+                this.boardElement = document.getElementById('board');
+                this.mineCounter = document.getElementById('mine-counter');
+                this.timerDisplay = document.getElementById('timer');
+                this.faceButton = document.getElementById('face-button');
+                this.modal = document.getElementById('modal');
+                this.modalTitle = document.getElementById('modal-title');
+                this.modalMessage = document.getElementById('modal-message');
+                this.modalButton = document.getElementById('modal-button');
+                this.statsElement = document.getElementById('stats');
+                this.hintButton = document.getElementById('hint-btn');
+
+                this.setupEventListeners();
+                this.newGame();
+                this.setupPWA();
+            }
+
+            setupPWA() {
+                // Create and link manifest for PWA
+                const manifest = {
+                    name: 'Minesweeper',
+                    short_name: 'Minesweeper',
+                    start_url: './',
+                    display: 'standalone',
+                    background_color: '#1a1a2e',
+                    theme_color: '#1a1a2e',
+                    icons: [{
+                        src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23c0c0c0" width="100" height="100"/><text x="50" y="70" font-size="60" text-anchor="middle">💣</text></svg>',
+                        sizes: '192x192',
+                        type: 'image/svg+xml'
+                    }]
+                };
+                
+                const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+                const manifestUrl = URL.createObjectURL(manifestBlob);
+                const link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = manifestUrl;
+                document.head.appendChild(link);
+
+                // Register service worker for offline support
+                if ('serviceWorker' in navigator) {
+                    const swCode = `
+                        const CACHE_NAME = 'minesweeper-v1';
+                        self.addEventListener('install', (e) => {
+                            e.waitUntil(
+                                caches.open(CACHE_NAME).then((cache) => {
+                                    return cache.addAll([location.href]);
+                                })
+                            );
+                            self.skipWaiting();
+                        });
+                        self.addEventListener('activate', (e) => {
+                            e.waitUntil(
+                                caches.keys().then((keys) => {
+                                    return Promise.all(keys.map((key) => {
+                                        if (key !== CACHE_NAME) {
+                                            return caches.delete(key);
+                                        }
+                                    }));
+                                })
+                            );
+                            return self.clients.claim();
+                        });
+                        self.addEventListener('fetch', (e) => {
+                            e.respondWith(
+                                caches.match(e.request).then((response) => {
+                                    return response || fetch(e.request).then((response) => {
+                                        const responseClone = response.clone();
+                                        caches.open(CACHE_NAME).then((cache) => {
+                                            cache.put(e.request, responseClone);
+                                        });
+                                        return response;
+                                    });
+                                })
+                            );
+                        });
+                    `;
+                    const blob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(blob);
+                    navigator.serviceWorker.register(swUrl).catch(() => {});
+                }
+            }
+
+            setupEventListeners() {
+                this.faceButton.addEventListener('click', () => this.newGame());
+                this.modalButton.addEventListener('click', () => {
+                    this.modal.classList.remove('show');
+                    this.newGame();
+                });
+
+                document.getElementById('easy-btn').addEventListener('click', () => this.setDifficulty('easy'));
+                document.getElementById('medium-btn').addEventListener('click', () => this.setDifficulty('medium'));
+                document.getElementById('hard-btn').addEventListener('click', () => this.setDifficulty('hard'));
+                this.hintButton.addEventListener('click', () => this.useHint());
+
+                document.getElementById('sound-btn').addEventListener('click', (e) => {
+                    const enabled = this.sound.toggle();
+                    e.target.textContent = enabled ? '🔊 Sound' : '🔇 Muted';
+                });
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+                
+                // Prevent context menu on board
+                this.boardElement.addEventListener('contextmenu', (e) => e.preventDefault());
+                
+                // Track mouse usage to disable keyboard mode
+                this.boardElement.addEventListener('mousedown', () => {
+                    this.keyboardMode = false;
+                    this.updateKeyboardSelection();
+                });
+
+                // Handle window resize/orientation change (debounced)
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        this.renderBoard();
+                        this.restoreBoardState();
+                    }, 150);
+                });
+            }
+
+            handleKeyboard(e) {
+                // Cheat code detection (type "xyzzy" to toggle mine visibility)
+                if (e.key.length === 1 && e.key.match(/[a-z]/i)) {
+                    this.cheatBuffer += e.key.toLowerCase();
+                    if (this.cheatBuffer.length > 10) {
+                        this.cheatBuffer = this.cheatBuffer.slice(-10);
+                    }
+                    if (this.cheatBuffer.endsWith('xyzzy') || this.cheatBuffer.endsWith('panda')) {
+                        this.toggleCheat();
+                        this.cheatBuffer = '';
+                    }
+                }
+
+                if (this.modal.classList.contains('show')) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        this.modalButton.click();
+                    }
+                    return;
+                }
+
+                switch(e.key) {
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.keyboardMode = true;
+                        this.keyboardRow = Math.max(0, this.keyboardRow - 1);
+                        this.updateKeyboardSelection();
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.keyboardMode = true;
+                        this.keyboardRow = Math.min(this.rows - 1, this.keyboardRow + 1);
+                        this.updateKeyboardSelection();
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        this.keyboardMode = true;
+                        this.keyboardCol = Math.max(0, this.keyboardCol - 1);
+                        this.updateKeyboardSelection();
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        this.keyboardMode = true;
+                        this.keyboardCol = Math.min(this.cols - 1, this.keyboardCol + 1);
+                        this.updateKeyboardSelection();
+                        break;
+                    case ' ':
+                    case 'Enter':
+                        e.preventDefault();
+                        if (this.keyboardMode) {
+                            this.handleClick(this.keyboardRow, this.keyboardCol, e);
+                        }
+                        break;
+                    case 'f':
+                    case 'F':
+                        e.preventDefault();
+                        if (this.keyboardMode) {
+                            this.handleRightClick(this.keyboardRow, this.keyboardCol);
+                        }
+                        break;
+                    case 'r':
+                    case 'R':
+                        e.preventDefault();
+                        this.newGame();
+                        break;
+                    case 'h':
+                    case 'H':
+                        e.preventDefault();
+                        this.useHint();
+                        break;
+                }
+            }
+
+            updateKeyboardSelection() {
+                // Remove all keyboard selections
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('keyboard-selected');
+                });
+                
+                // Add selection to current cell
+                if (this.keyboardMode) {
+                    const cell = this.getCellElement(this.keyboardRow, this.keyboardCol);
+                    if (cell) {
+                        cell.classList.add('keyboard-selected');
+                        cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    }
+                }
+            }
+
+            setDifficulty(difficulty) {
+                this.difficulty = difficulty;
+                document.querySelectorAll('.controls button:not(.sound-toggle)').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(`${difficulty}-btn`).classList.add('active');
+                this.newGame();
+            }
+
+            newGame() {
+                const config = this.difficulties[this.difficulty];
+                this.rows = config.rows;
+                this.cols = config.cols;
+                this.totalMines = config.mines;
+                this.minesRemaining = this.totalMines;
+
+                this.board = [];
+                this.revealed = [];
+                this.flagged = [];
+                this.questioned = [];
+                this.gameOver = false;
+                this.gameWon = false;
+                this.gameStarted = false;
+                this.firstClick = true;
+                this.timer = 0;
+                this.keyboardRow = 0;
+                this.keyboardCol = 0;
+                this.keyboardMode = false;
+                this.cheatsEnabled = false;
+
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+
+                this.updateMineCounter();
+                this.updateTimer();
+                this.faceButton.textContent = '😊';
+
+                // Initialize arrays
+                for (let r = 0; r < this.rows; r++) {
+                    this.board[r] = [];
+                    this.revealed[r] = [];
+                    this.flagged[r] = [];
+                    this.questioned[r] = [];
+                    for (let c = 0; c < this.cols; c++) {
+                        this.board[r][c] = 0;
+                        this.revealed[r][c] = false;
+                        this.flagged[r][c] = false;
+                        this.questioned[r][c] = false;
+                    }
+                }
+
+                this.renderBoard();
+                this.updateStats();
+            }
+
+            placeMines(excludeRow, excludeCol) {
+                let minesPlaced = 0;
+                const excludeSet = new Set();
+
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const nr = excludeRow + dr;
+                        const nc = excludeCol + dc;
+                        if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                            excludeSet.add(`${nr},${nc}`);
+                        }
+                    }
+                }
+
+                while (minesPlaced < this.totalMines) {
+                    const r = Math.floor(Math.random() * this.rows);
+                    const c = Math.floor(Math.random() * this.cols);
+
+                    if (this.board[r][c] !== -1 && !excludeSet.has(`${r},${c}`)) {
+                        this.board[r][c] = -1;
+                        minesPlaced++;
+                    }
+                }
+
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        if (this.board[r][c] !== -1) {
+                            this.board[r][c] = this.countAdjacentMines(r, c);
+                        }
+                    }
+                }
+            }
+
+            countAdjacentMines(row, col) {
+                let count = 0;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nr = row + dr;
+                        const nc = col + dc;
+                        if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                            if (this.board[nr][nc] === -1) count++;
+                        }
+                    }
+                }
+                return count;
+            }
+
+            countAdjacentFlags(row, col) {
+                let count = 0;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nr = row + dr;
+                        const nc = col + dc;
+                        if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                            if (this.flagged[nr][nc]) count++;
+                        }
+                    }
+                }
+                return count;
+            }
+
+            countAdjacentUnrevealed(row, col) {
+                let count = 0;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nr = row + dr;
+                        const nc = col + dc;
+                        if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                            if (!this.revealed[nr][nc] && !this.flagged[nr][nc]) count++;
+                        }
+                    }
+                }
+                return count;
+            }
+
+            findSafeCells() {
+                const safeCells = [];
+                const mineCells = [];
+
+                // Find cells that can be safely revealed
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        if (!this.revealed[r][c] || this.board[r][c] <= 0) continue;
+
+                        const num = this.board[r][c];
+                        const flags = this.countAdjacentFlags(r, c);
+                        const unrevealed = this.countAdjacentUnrevealed(r, c);
+
+                        // If all mines are flagged, remaining cells are safe
+                        if (flags === num && unrevealed > 0) {
+                            for (let dr = -1; dr <= 1; dr++) {
+                                for (let dc = -1; dc <= 1; dc++) {
+                                    if (dr === 0 && dc === 0) continue;
+                                    const nr = r + dr;
+                                    const nc = c + dc;
+                                    if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                                        if (!this.revealed[nr][nc] && !this.flagged[nr][nc]) {
+                                            if (!safeCells.find(cell => cell.row === nr && cell.col === nc)) {
+                                                safeCells.push({ row: nr, col: nc });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // If all unrevealed cells must be mines
+                        if (unrevealed === num - flags && unrevealed > 0) {
+                            for (let dr = -1; dr <= 1; dr++) {
+                                for (let dc = -1; dc <= 1; dc++) {
+                                    if (dr === 0 && dc === 0) continue;
+                                    const nr = r + dr;
+                                    const nc = c + dc;
+                                    if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                                        if (!this.revealed[nr][nc] && !this.flagged[nr][nc]) {
+                                            if (!mineCells.find(cell => cell.row === nr && cell.col === nc)) {
+                                                mineCells.push({ row: nr, col: nc });
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return { safeCells, mineCells };
+            }
+
+            useHint() {
+                if (this.gameOver || this.gameWon || this.firstClick) {
+                    return;
+                }
+
+                const { safeCells, mineCells } = this.findSafeCells();
+
+                if (safeCells.length > 0) {
+                    // Reveal a random safe cell
+                    const randomSafe = safeCells[Math.floor(Math.random() * safeCells.length)];
+                    const cell = this.getCellElement(randomSafe.row, randomSafe.col);
+                    cell.classList.add('hint-highlight');
+                    this.sound.play('hint');
+                    
+                    setTimeout(() => {
+                        this.revealCell(randomSafe.row, randomSafe.col);
+                        this.checkWin();
+                        cell.classList.remove('hint-highlight');
+                    }, 500);
+                } else if (mineCells.length > 0) {
+                    // Flag a random mine cell
+                    const randomMine = mineCells[Math.floor(Math.random() * mineCells.length)];
+                    const cell = this.getCellElement(randomMine.row, randomMine.col);
+                    cell.classList.add('hint-highlight');
+                    this.sound.play('hint');
+                    
+                    setTimeout(() => {
+                        if (!this.flagged[randomMine.row][randomMine.col]) {
+                            this.flagged[randomMine.row][randomMine.col] = true;
+                            cell.classList.add('flagged');
+                            this.minesRemaining--;
+                            this.updateMineCounter();
+                        }
+                        cell.classList.remove('hint-highlight');
+                    }, 500);
+                } else {
+                    // No hints available - reveal a random unrevealed cell (risky!)
+                    const unrevealed = [];
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            if (!this.revealed[r][c] && !this.flagged[r][c] && this.board[r][c] !== -1) {
+                                unrevealed.push({ row: r, col: c });
+                            }
+                        }
+                    }
+                    if (unrevealed.length > 0) {
+                        const random = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+                        const cell = this.getCellElement(random.row, random.col);
+                        cell.classList.add('hint-highlight');
+                        this.sound.play('hint');
+                        
+                        setTimeout(() => {
+                            this.revealCell(random.row, random.col);
+                            this.checkWin();
+                            cell.classList.remove('hint-highlight');
+                        }, 500);
+                    }
+                }
+            }
+
+            renderBoard() {
+                this.boardElement.innerHTML = '';
+
+                // Calculate responsive cell size
+                const cellSize = this.calculateCellSize();
+
+                // Calculate board dimensions
+                const boardWidth = this.cols * cellSize;
+                const boardHeight = this.rows * cellSize;
+                
+                // Set grid template
+                this.boardElement.style.gridTemplateColumns = `repeat(${this.cols}, ${cellSize}px)`;
+                this.boardElement.style.gridTemplateRows = `repeat(${this.rows}, ${cellSize}px)`;
+                
+                // Set board dimensions
+                this.boardElement.style.width = `${boardWidth}px`;
+                this.boardElement.style.minWidth = `${boardWidth}px`;
+                this.boardElement.style.maxWidth = `${boardWidth}px`;
+                this.boardElement.style.height = `${boardHeight}px`;
+                this.boardElement.style.minHeight = `${boardHeight}px`;
+                this.boardElement.style.display = 'grid';
+                this.boardElement.style.visibility = 'visible';
+                this.boardElement.style.opacity = '1';
+                
+                // Set header width to match board width
+                const headerElement = document.querySelector('.header');
+                if (headerElement) {
+                    headerElement.style.width = `${boardWidth}px`;
+                    headerElement.style.minWidth = `${boardWidth}px`;
+                    headerElement.style.maxWidth = `${boardWidth}px`;
+                }
+                
+                // Calculate minimum width needed for controls (3 buttons + 2 gaps)
+                // Each button is roughly 80-90px, so 3 buttons + 2*5px gaps = ~270-280px minimum
+                // For Easy (270px board), we need to ensure buttons fit
+                const minControlsWidth = 280; // Minimum width to fit 3 buttons comfortably
+                const controlsWidth = Math.max(boardWidth, minControlsWidth);
+                
+                // Set controls width
+                const controlsElement = document.querySelector('.controls');
+                if (controlsElement) {
+                    controlsElement.style.width = `${controlsWidth}px`;
+                    controlsElement.style.maxWidth = `${controlsWidth}px`;
+                }
+                
+                // Set container width to match the wider of board or controls + padding (10px each side = 20px) + border (3px each side = 6px)
+                // Use the maximum of boardWidth and controlsWidth to ensure everything is visible
+                const maxWidth = Math.max(boardWidth, controlsWidth);
+                const gameContainer = document.querySelector('.game-container');
+                if (gameContainer) {
+                    const containerWidth = maxWidth + 20 + 6; // max width + padding + border
+                    gameContainer.style.width = `${containerWidth}px`;
+                    gameContainer.style.minWidth = `${containerWidth}px`;
+                    gameContainer.style.maxWidth = 'none'; // Allow container to grow if needed
+                    gameContainer.style.overflow = 'visible'; // Ensure nothing is clipped
+                }
+                
+                // Ensure board is visible and properly sized
+                this.boardElement.style.display = 'grid';
+                this.boardElement.style.visibility = 'visible';
+                this.boardElement.style.opacity = '1';
+
+                // Calculate font size based on cell size
+                const fontSize = Math.max(10, Math.floor(cellSize * 0.5));
+                const flagFontSize = Math.max(10, Math.floor(cellSize * 0.5));
+
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.row = r;
+                        cell.dataset.col = c;
+
+                        // Apply dynamic cell size
+                        cell.style.width = `${cellSize}px`;
+                        cell.style.height = `${cellSize}px`;
+                        cell.style.fontSize = `${fontSize}px`;
+
+                        // Mouse events
+                        cell.addEventListener('click', (e) => this.handleClick(r, c, e));
+                        cell.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            this.handleRightClick(r, c);
+                        });
+                        cell.addEventListener('mousedown', (e) => {
+                            if (!this.gameOver && !this.revealed[r][c]) {
+                                this.faceButton.textContent = '😮';
+                            }
+                            if (e.button === 1 || (e.buttons === 3)) {
+                                this.handleChord(r, c);
+                            }
+                        });
+                        cell.addEventListener('mouseup', () => {
+                            if (!this.gameOver && !this.gameWon) {
+                                this.faceButton.textContent = '😊';
+                            }
+                        });
+
+                        // Touch events
+                        this.addTouchHandlers(cell, r, c);
+
+                        this.boardElement.appendChild(cell);
+                    }
+                }
+
+                // Update CSS custom property for flag size
+                this.boardElement.style.setProperty('--flag-font-size', `${flagFontSize}px`);
+
+                this.updateKeyboardSelection();
+                this.updateHelpText();
+            }
+
+            calculateCellSize() {
+                const isMobile = window.innerWidth <= 600;
+                const padding = isMobile ? 20 : 40; // Account for body and container padding
+                const availableWidth = window.innerWidth - padding;
+
+                // Calculate ideal cell size to fit the board
+                const idealCellSize = Math.floor(availableWidth / this.cols);
+
+                // Set bounds: minimum 10px (for hard on small screens), maximum 30px (desktop default)
+                const minCellSize = 10;
+                const maxCellSize = 30;
+
+                return Math.max(minCellSize, Math.min(maxCellSize, idealCellSize));
+            }
+
+            addTouchHandlers(cell, row, col) {
+                let touchStartTime = 0;
+                let touchStartX = 0;
+                let touchStartY = 0;
+                let longPressTimer = null;
+                let lastTapTime = 0;
+                const LONG_PRESS_DURATION = 300;
+                const MOVE_THRESHOLD = 10;
+                const DOUBLE_TAP_DELAY = 300;
+
+                const clearLongPress = () => {
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                    cell.classList.remove('long-press-active');
+                };
+
+                cell.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    touchStartTime = Date.now();
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+
+                    // Show pressing face
+                    if (!this.gameOver && !this.gameWon && !this.revealed[row][col]) {
+                        this.faceButton.textContent = '😮';
+                    }
+
+                    // Start long-press timer
+                    longPressTimer = setTimeout(() => {
+                        // Long press detected - flag the cell
+                        cell.classList.add('long-press-active');
+                        this.handleRightClick(row, col);
+                        longPressTimer = null;
+                    }, LONG_PRESS_DURATION);
+                }, { passive: false });
+
+                cell.addEventListener('touchmove', (e) => {
+                    // Cancel long-press if finger moved too far
+                    const touch = e.touches[0];
+                    const dx = Math.abs(touch.clientX - touchStartX);
+                    const dy = Math.abs(touch.clientY - touchStartY);
+                    if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+                        clearLongPress();
+                    }
+                }, { passive: true });
+
+                cell.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    const touchDuration = Date.now() - touchStartTime;
+                    const currentTime = Date.now();
+
+                    // Reset face
+                    if (!this.gameOver && !this.gameWon) {
+                        this.faceButton.textContent = '😊';
+                    }
+
+                    // If long-press already triggered, don't do anything else
+                    if (!longPressTimer && touchDuration >= LONG_PRESS_DURATION) {
+                        cell.classList.remove('long-press-active');
+                        return;
+                    }
+
+                    clearLongPress();
+
+                    // Check for double-tap on revealed number (chord action)
+                    if (this.revealed[row][col] && this.board[row][col] > 0) {
+                        if (currentTime - lastTapTime < DOUBLE_TAP_DELAY) {
+                            this.handleChord(row, col);
+                            lastTapTime = 0;
+                            return;
+                        }
+                        lastTapTime = currentTime;
+                        return;
+                    }
+
+                    // Single tap - reveal cell
+                    this.handleClick(row, col, e);
+                }, { passive: false });
+
+                cell.addEventListener('touchcancel', () => {
+                    clearLongPress();
+                    if (!this.gameOver && !this.gameWon) {
+                        this.faceButton.textContent = '😊';
+                    }
+                });
+            }
+
+            isTouchDevice() {
+                return ('ontouchstart' in window) ||
+                       (navigator.maxTouchPoints > 0) ||
+                       (navigator.msMaxTouchPoints > 0);
+            }
+
+            updateHelpText() {
+                const hintElement = document.getElementById('keyboard-hint');
+                if (hintElement) {
+                    if (this.isTouchDevice() && window.innerWidth <= 600) {
+                        hintElement.textContent = 'Tap to reveal, long-press to flag';
+                    } else {
+                        hintElement.textContent = 'Use arrow keys to navigate, Space to reveal, F to flag, R to restart';
+                    }
+                }
+            }
+
+            toggleCheat() {
+                this.cheatsEnabled = !this.cheatsEnabled;
+
+                // Only works after mines are placed
+                if (this.firstClick) {
+                    this.cheatsEnabled = false;
+                    return;
+                }
+
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const cell = this.getCellElement(r, c);
+                        if (this.board[r][c] === -1) {
+                            if (this.cheatsEnabled) {
+                                cell.classList.add('cheat-mine');
+                            } else {
+                                cell.classList.remove('cheat-mine');
+                            }
+                        }
+                    }
+                }
+
+                // Visual feedback
+                this.faceButton.textContent = this.cheatsEnabled ? '😈' : '😊';
+                if (!this.cheatsEnabled && !this.gameOver && !this.gameWon) {
+                    this.faceButton.textContent = '😊';
+                }
+            }
+
+            restoreBoardState() {
+                // Restore visual state of all cells after re-rendering
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const cell = this.getCellElement(r, c);
+                        if (!cell) continue;
+
+                        if (this.revealed[r][c]) {
+                            cell.classList.add('revealed');
+                            if (this.board[r][c] === -1) {
+                                cell.textContent = '💣';
+                            } else if (this.board[r][c] > 0) {
+                                cell.textContent = this.board[r][c];
+                                cell.dataset.number = this.board[r][c];
+                            }
+                        } else if (this.flagged[r][c]) {
+                            cell.classList.add('flagged');
+                        } else if (this.questioned[r][c]) {
+                            cell.classList.add('question');
+                        }
+
+                        // Restore cheat highlighting
+                        if (this.cheatsEnabled && this.board[r][c] === -1) {
+                            cell.classList.add('cheat-mine');
+                        }
+                    }
+                }
+            }
+
+            handleClick(row, col, e) {
+                if (this.gameOver || this.gameWon) return;
+                if (this.flagged[row][col] || this.questioned[row][col]) return;
+
+                if (this.revealed[row][col] && this.board[row][col] > 0) {
+                    this.handleChord(row, col);
+                    return;
+                }
+
+                if (this.revealed[row][col]) return;
+
+                if (this.firstClick) {
+                    this.firstClick = false;
+                    this.placeMines(row, col);
+                    this.startTimer();
+                }
+
+                this.sound.play('click');
+                this.revealCell(row, col);
+                this.checkWin();
+            }
+
+            handleRightClick(row, col) {
+                if (this.gameOver || this.gameWon) return;
+                if (this.revealed[row][col]) return;
+
+                const cell = this.getCellElement(row, col);
+
+                if (!this.flagged[row][col] && !this.questioned[row][col]) {
+                    this.flagged[row][col] = true;
+                    cell.classList.add('flagged');
+                    this.minesRemaining--;
+                    this.sound.play('flag');
+                } else if (this.flagged[row][col]) {
+                    this.flagged[row][col] = false;
+                    this.questioned[row][col] = true;
+                    cell.classList.remove('flagged');
+                    cell.classList.add('question');
+                    this.minesRemaining++;
+                    this.sound.play('unflag');
+                } else {
+                    this.questioned[row][col] = false;
+                    cell.classList.remove('question');
+                }
+
+                this.updateMineCounter();
+            }
+
+            handleChord(row, col) {
+                if (!this.revealed[row][col]) return;
+                if (this.board[row][col] <= 0) return;
+
+                const adjacentFlags = this.countAdjacentFlags(row, col);
+                if (adjacentFlags !== this.board[row][col]) return;
+
+                this.sound.play('chord');
+
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nr = row + dr;
+                        const nc = col + dc;
+                        if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                            if (!this.flagged[nr][nc] && !this.revealed[nr][nc]) {
+                                this.revealCell(nr, nc);
+                            }
+                        }
+                    }
+                }
+
+                this.checkWin();
+            }
+
+            revealCell(row, col) {
+                if (row < 0 || row >= this.rows || col < 0 || col >= this.cols) return;
+                if (this.revealed[row][col] || this.flagged[row][col]) return;
+
+                this.revealed[row][col] = true;
+                const cell = this.getCellElement(row, col);
+                cell.classList.add('revealed');
+                cell.classList.remove('question');
+                this.questioned[row][col] = false;
+
+                if (this.board[row][col] === -1) {
+                    cell.textContent = '💣';
+                    cell.classList.add('mine-exploded');
+                    this.gameOver = true;
+                    this.endGame(false);
+                    return;
+                }
+
+                if (this.board[row][col] > 0) {
+                    cell.textContent = this.board[row][col];
+                    cell.dataset.number = this.board[row][col];
+                } else {
+                    this.sound.play('reveal');
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            if (dr === 0 && dc === 0) continue;
+                            this.revealCell(row + dr, col + dc);
+                        }
+                    }
+                }
+            }
+
+            getCellElement(row, col) {
+                return this.boardElement.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            }
+
+            checkWin() {
+                if (this.gameOver) return;
+
+                let unrevealedSafe = 0;
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        if (!this.revealed[r][c] && this.board[r][c] !== -1) {
+                            unrevealedSafe++;
+                        }
+                    }
+                }
+
+                if (unrevealedSafe === 0) {
+                    this.gameWon = true;
+                    this.endGame(true);
+                }
+            }
+
+            endGame(won) {
+                clearInterval(this.timerInterval);
+
+                if (won) {
+                    this.faceButton.textContent = '😎';
+                    this.sound.play('win');
+
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            if (this.board[r][c] === -1 && !this.flagged[r][c]) {
+                                this.flagged[r][c] = true;
+                                const cell = this.getCellElement(r, c);
+                                cell.classList.add('flagged');
+                            }
+                        }
+                    }
+                    this.minesRemaining = 0;
+                    this.updateMineCounter();
+
+                    this.modalTitle.textContent = '🎉 You Win!';
+                    this.modalMessage.textContent = `Completed in ${this.timer} seconds!`;
+                } else {
+                    this.faceButton.textContent = '😵';
+                    this.sound.play('explosion');
+
+                    for (let r = 0; r < this.rows; r++) {
+                        for (let c = 0; c < this.cols; c++) {
+                            const cell = this.getCellElement(r, c);
+                            if (this.board[r][c] === -1) {
+                                if (!this.flagged[r][c]) {
+                                    cell.classList.add('revealed');
+                                    if (!cell.classList.contains('mine-exploded')) {
+                                        cell.textContent = '💣';
+                                    }
+                                }
+                            } else if (this.flagged[r][c]) {
+                                cell.classList.add('revealed');
+                                cell.classList.remove('flagged');
+                                cell.textContent = '❌';
+                            }
+                        }
+                    }
+
+                    this.modalTitle.textContent = '💥 Yikes! Game Over';
+                    this.modalMessage.textContent = 'You hit a mine! Better luck next time!';
+                }
+
+                this.saveStats(won);
+                this.updateStats();
+
+                setTimeout(() => {
+                    this.modal.classList.add('show');
+                }, 500);
+            }
+
+            startTimer() {
+                this.gameStarted = true;
+                this.timerInterval = setInterval(() => {
+                    this.timer++;
+                    if (this.timer > 999) this.timer = 999;
+                    this.updateTimer();
+                }, 1000);
+            }
+
+            updateTimer() {
+                this.timerDisplay.textContent = String(this.timer).padStart(3, '0');
+            }
+
+            updateMineCounter() {
+                const display = Math.max(-99, Math.min(999, this.minesRemaining));
+                this.mineCounter.textContent = String(display).padStart(3, '0');
+            }
+
+            saveStats(won) {
+                const key = `minesweeper_${this.difficulty}`;
+                let stats = JSON.parse(localStorage.getItem(key) || '{"played":0,"won":0,"bestTime":null}');
+                stats.played++;
+                if (won) {
+                    stats.won++;
+                    if (stats.bestTime === null || this.timer < stats.bestTime) {
+                        stats.bestTime = this.timer;
+                    }
+                }
+                localStorage.setItem(key, JSON.stringify(stats));
+            }
+
+            updateStats() {
+                const key = `minesweeper_${this.difficulty}`;
+                const stats = JSON.parse(localStorage.getItem(key) || '{"played":0,"won":0,"bestTime":null}');
+                const winRate = stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
+                const bestTime = stats.bestTime !== null ? `${stats.bestTime}s` : '-';
+                this.statsElement.textContent = `Games: ${stats.played} | Wins: ${stats.won} (${winRate}%) | Best: ${bestTime}`;
+            }
+        }
+
+        // Initialize game when page loads
+        const game = new Minesweeper();
+    </script>
+</body>
+</html>
